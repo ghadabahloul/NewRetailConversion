@@ -1,11 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from patch_from_xgtf import *
+# from patch_from_xgtf import *
+from patch_from_xml import *
 import argparse
 
 
-classify_patches('/user/gbahloul/home/WORK_2016/shanu-work/Retail-Conversion-master/S1-T1-C/pets2006s1t1cview1.xgtf','/user/gbahloul/home/WORK_2016/shanu-work/Retail-Conversion-master/S1-T1-C/video/pets2006/S1-T1-C/1','jpeg','./resultat2','')
+classify_patches('./test-files/videoOriginalcut/Animaux-v2.xml','./test-files/videoOriginalcut/images/','jpg','./test-files/resultat','')
 
 #classify_patches('/user/gbahloul/home/WORK_2016/Retail-Conversion-master/videoOriginalcut/Animaux-v2.xml','/user/gbahloul/home/WORK_2016/Retail-Conversion-master/videoOriginalcut/images/','jpg','./originalcut','originalcut')
 

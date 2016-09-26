@@ -93,7 +93,7 @@ def classify_patches(xgtf_name,frames_path,frame_ext,new_location,new_prefix):
 		frame_list=list(set(frame_list+j)) 
 	for frame in f:  #Delete the original f list which has entries of the form '12:12' & '13:14'
 		del frame
-	list_of_files=[name for name in listdir(frames_path) if name[-4:] in image_type ] #Generate a list of the files from the dataset. #to extract the files with .jpeg extension. Modify it to get .jpg if need be.
+	list_of_files=[name for name in listdir(frames_path) if name[-3:] in image_type ] #Generate a list of the files from the dataset. #to extract the files with .jpeg extension. Modify it to get .jpg if need be.
 	#print(list_of_files)
 	list_of_files.sort() #Sort the list of files from the ground truth 
 	for idx in frame_list:  #Loop to check the correspondence of positive frames from the list of files and append them to a new list 
@@ -192,7 +192,7 @@ def write_voc_format(xgtf_path,frames_path, patch_folder, patch_prefix, patch_ex
 			del frame
 		
 		
-		list_of_files=[name for name in listdir(frames_path) if name[-4:] in image_type ] #to extract the files with .jpeg extension. Modify it to get .jpg if need be.
+		list_of_files=[name for name in listdir(frames_path) if name[-3:] in image_type ] #to extract the files with .jpeg extension. Modify it to get .jpg if need be.
 		list_of_files.sort() #Sort the list of files from the ground truth 
 				#frame_list=map(int, frame_list)
 		

@@ -2,9 +2,15 @@
 
 import sys # Required for reading command line arguments
 
-from xml.etree import ElementTree as ET # Required for manipulating  XML files (XGTF files are also XML in nature)
+import glob
 
-from xml.etree.ElementTree  import QName # Required for handling namespaces in XGTF files
+import shutil
+
+import time
+
+from xml.etree import ElementTree as ET # Required for manipulating  XML files (XML files are also XML in nature)
+
+from xml.etree.ElementTree  import QName, Element, SubElement # Required for handling namespaces in XML files
 
 import os # Required for path manipulations
 
@@ -12,25 +18,11 @@ from os import listdir # Required for making a list of all the images in the dir
 
 from os.path import expanduser # Required for expanding '~', which stands for home folder. Used just in case the command line arguments contain "~". Without this, python won't parse "~"
 
-import glob
-
-import shutil
-
-import time
-
-from xml.etree.ElementTree import Element, SubElement
-
-from xml.etree.ElementTree  import QName # Required for handling namespaces in XGTF files
-
-import os # Required for path manipulations
-
 from skimage.data import imread # Required for reading images
 
 from skimage.io import imsave # Required for writing image patches
 
 from collections import Counter # Required for counting occourances of each element in a list
-
-from os.path import expanduser # Required for expanding '~', which stands for home folder. Used just in case the command line arguments contain "~". Without this, python won't parse "~"
 
 from subprocess import Popen
 
@@ -46,9 +38,9 @@ with open('config.json') as f:
 		for image_type in data["image_type"]:
 			print(image_type)			
 			
-def classify_patches(xgtf_name,frames_path,frame_ext,new_location,new_prefix):
+def classify_patches(xml_name,frames_path,frame_ext,new_location,new_prefix):
 	'''
-	xgtf_name : Full path + name of the XGTF File.
+	xml_name : Full path + name of the XML File.
 
 	frames_path : Root path in which the patches are stored 
 
@@ -59,7 +51,7 @@ def classify_patches(xgtf_name,frames_path,frame_ext,new_location,new_prefix):
     new_prefix : new_prefix is a prefix that is prefixpended to all the frames when they are stored in new_location. Can be provided with an empty argument '' as well, if needed.	
 	'''
 		
-	fname = os.path.expanduser(xgtf_name) # Full path of the Ground Truth XGTF File
+	fname = os.path.expanduser(xml_name) # Full path of the Ground Truth XML File
 	root_path, fname = os.path.split(fname)
 	path_folder = os.path.expanduser(frames_path) # Full path of the folder where frames have been stored.
 	frame_ext  = frame_ext  # File extension of the patches
@@ -68,31 +60,20 @@ def classify_patches(xgtf_name,frames_path,frame_ext,new_location,new_prefix):
 	patch_files = glob.glob(os.path.join(path_folder,'*.'+frame_ext))
 	patch_files = [os.path.basename(f) for f in patch_files]
 	patch_files = [os.path.splitext(f)[0] for f in patch_files]
-	#namespace = 'http://lamp.cfar.umd.edu/viper#' # All XGTF files from SUP use this namespace. DO NOT EDIT or REMOVE this line 
-	doc = ET.parse(os.path.join(root_path,fname)) # This line reads the XGTF file from the disk
-	#data_tag = str(QName(namespace,'data')) # This helps Python to parse each tag by stripping it off its namespace part. So it is essential. DO NOT CHANGE OR COMMENT
-	data_tag = "Object"
-	data = doc.find(data_tag) # All relevant data for creating patches is present with a "data" tag. Hence we find all nodes which have a "data" tag
+	doc = ET.parse(os.path.join(root_path,fname)) # This line reads the XML file from the disk
+	data = doc.find('VCAAnalysis').find('VCAStream').findall('VCAFrame') # All relevant data for creating patches is present with a "data" tag. Hence we find all nodes which have a "data" tag
 	frame_list=list() 
 	j=list()
+	frame_index=1
 	temp_list=list()
-	root=doc.getroot()
-	for x in data.iter():
-		#location = ["Location","info2D"]
-		#if (x.get('name')in location): #This is to be used for extracting the 'Location' tag from the .xgtf file. Modify this according to the .xgtf file being used.
-			f= [gt.get('framespan') for gt in x] 
-			j=list()
-			for frame in f:				#Iterate through the list f which contains information of the frames in '34:34' format.
-				g=frame.split(':',1)	#Used to strip the entry 
-				g= map(int,g)			#Convert the string into an integer
-				if g[0]==g[1]:			#For handling entries of the form '34:34'
-					j.append(g[0])		#Append either one of the entry to the temporary list
-				if g[0]!=g[1]:			# For handling entries of the form '34:36'
-					for i in range(g[0],g[1]+1): #Append the list of numbers from the starting to the finishing frame
-						j.append(i)
-		frame_list=list(set(frame_list+j)) 
-	for frame in f:  #Delete the original f list which has entries of the form '12:12' & '13:14'
-		del frame
+	for x in data:
+		objects=x.find('Object')
+		if objects != None:
+			j.append(frame_index)
+		frame_index+=1
+	frame_list=list(set(frame_list+j))
+	# for frame in f:  #Delete the original f list which has entries of the form '12:12' & '13:14'
+	# 	del frame
 	list_of_files=[name for name in listdir(frames_path) if name[-3:] in image_type ] #Generate a list of the files from the dataset. #to extract the files with .jpeg extension. Modify it to get .jpg if need be.
 	#print(list_of_files)
 	list_of_files.sort() #Sort the list of files from the ground truth 
@@ -146,60 +127,41 @@ def classify_patches(xgtf_name,frames_path,frame_ext,new_location,new_prefix):
 	 	Popen(['sh remove_xml_declaration.sh %s'%(os.path.join(new_location,'negative','annotations',new_prefix+'_'+os.path.splitext(f)[0]+'.xml'))],shell=True)
 	print('The Preprocessing is finished.\n')
 
-def write_voc_format(xgtf_path,frames_path, patch_folder, patch_prefix, patch_ext, patch_type,negative_list):
+def write_voc_format(XML,frames_path, patch_folder, patch_prefix, patch_ext, patch_type,negative_list):
 	if patch_type=='positive':
-		fname = os.path.expanduser(xgtf_path) # Full path of the Ground Truth XGTF File
+		fname = os.path.expanduser(XML) # Full path of the Ground Truth XML File
 		root_path, fname = os.path.split(fname)
 		path_folder = os.path.expanduser(patch_folder) # Full path of the folder where image patches have to be stored
 		annotate_folder = os.path.basename(os.path.normpath(patch_folder))
-		namespace = 'http://lamp.cfar.umd.edu/viper#' # All XGTF files from SUP use this namespace. DO NOT EDIT or REMOVE this line 
-		doc = ET.parse(os.path.join(root_path,fname)) # This line reads the XGTF file from the disk
-		data_tag = str(QName(namespace,'data')) # This helps Python to parse each tag by stripping it off its namespace part. So it is essential. DO NOT CHANGE OR COMMENT
-		data = doc.find(data_tag) # All relevant data for creating patches is present with a "data" tag. Hence we find all nodes which have a "data" tag
+		doc = ET.parse(os.path.join(root_path,fname)) # This line reads the XML file from the disk
+		data = doc.find('VCAAnalysis').find('VCAStream').findall('VCAFrame') # All relevant data for creating patches is present with a "data" tag. Hence we find all nodes which have a "data" tag
 		# The next 5 lines create empty lists for storing ground truth annotation information (frame number, height, width, x (column) and y (row)
 		frame_list = list()
 		height_list = list()
 		width_list = list()
 		x_list = list()
 		y_list = list()
-		#xmin_list = list()
-		#ymin_list = list()
-		#xmax_list = list()
-		#ymax_list = list()
-		#objectID_list = list()
 		j=list()
 		temp_list=list()
 		if not(os.path.exists(os.path.join(path_folder,'annotations'))):
 			os.makedirs(os.path.join(path_folder,'annotations'))
-		for x in data.iter():
-			location = ["Location","info2D"]
-			if (x.get('name') in location):
-				f=[[gt.get('framespan'),gt.get('height'),gt.get('width'),gt.get('x'),gt.get('y')] for gt in x]
-				for frame in f:
-					g=frame[0].split(':',1)
-					g= map(int,g)
-					if g[0]==g[1]:
-						j.append(g[0])
-						height_list.append(int(frame[1]))
-						width_list.append(int(frame[2]))
-						x_list.append(int(frame[3]))
-						y_list.append(int(frame[4]))
-					if g[0]!=g[1]:
-						for i in range(g[0],g[1]+1):
-							j.append(i)
-							height_list.append(int(frame[1]))
-							width_list.append(int(frame[2]))
-							x_list.append(int(frame[3]))
-							y_list.append(int(frame[4]))
-			frame_list=list(set(frame_list+j))
+		frame_index=1
+		for x in data:
+			objects=x.find('Object')
+			if objects != None:
+				j.append(frame_index)
+				objects=x.findall('Object')
+				for t in objects:
+					height_list.append(int(t.get('height')))
+					width_list.append(int(t.get('width')))
+					x_list.append(int(t.get('minX')))
+					y_list.append(int(t.get('minY')))
+			frame_index+=1
+		frame_list=list(set(frame_list+j))
 
-		for frame in f: #Delete the original f list which has entries of the form '12:12' & '13:14'
-			del frame
-		
-		
-		list_of_files=[name for name in listdir(frames_path) if name[-4:] in image_type ] #to extract the files with .jpeg extension. Modify it to get .jpg if need be.
+		list_of_files=[name for name in listdir(frames_path) if name[-3:] in image_type ] #to extract the files with .jpeg extension. Modify it to get .jpg if need be.
 		list_of_files.sort() #Sort the list of files from the ground truth 
-				#frame_list=map(int, frame_list)
+		#frame_list=map(int, frame_list)
 		
 		for idx in frame_list:
 			temp_list.append(list_of_files[idx-1])
@@ -207,10 +169,10 @@ def write_voc_format(xgtf_path,frames_path, patch_folder, patch_prefix, patch_ex
 		neg_patches= list(set(list_of_files)-set(frame_list))
 		frame_list = [os.path.splitext(each)[0] for each in frame_list]
 		occour = Counter(frame_list) # This counts the number of people in each frame depending on number of occourances of that frame with GT information
-	#	print "Negative patches from the second function",neg_patches
+		#print "Negative patches from the second function",neg_patches
 		for key in occour:
 			counter=1
-		#	img = imread(os.path.join(root_path,input_name)) # Read the image. This uses scikit-image and not OpenCV
+			#img = imread(os.path.join(root_path,input_name)) # Read the image. This uses scikit-image and not OpenCV
 			indices = [i for i, x  in enumerate(frame_list) if x==key] # Find indices containing information about a certain frame 
 			for ind in indices: 
 				if counter==1:
@@ -250,7 +212,7 @@ def write_voc_format(xgtf_path,frames_path, patch_folder, patch_prefix, patch_ex
 		for key in negative_list:
 			patch_files.append('_'+key)
 		#patch_files = [os.path.basename(f) for f in patch_files]
-#		patch_files = [os.path.splitext(f)[0] for f in patch_files]
+		#patch_files = [os.path.splitext(f)[0] for f in patch_files]
 		annotate_folder = os.path.basename(os.path.normpath(patch_folder))
 		if not(os.path.exists(os.path.join(path_folder,'annotations'))):
 			os.makedirs(os.path.join(path_folder,'annotations'))
@@ -279,19 +241,3 @@ def write_voc_format(xgtf_path,frames_path, patch_folder, patch_prefix, patch_ex
 			out_file = open(os.path.join(path_folder,'annotations',os.path.splitext(f)[0]+'.xml'),'w')
 			out_file.write(prettify(root))
 			out_file.close()
-	
-
-
-	
-
-			
-			
-
-	
-	
-
-
-
-
-
-
