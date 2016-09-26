@@ -77,6 +77,7 @@ def classify_patches(xgtf_name,frames_path,frame_ext,new_location,new_prefix):
 	temp_list=list()
 	root=doc.getroot()
 	for x in data.iter():
+		print(x.tag)
 		location = ["Location","info2D"]
 		if (x.get('name')in location): #This is to be used for extracting the 'Location' tag from the .xgtf file. Modify this according to the .xgtf file being used.
 			f= [gt.get('framespan') for gt in x] 

@@ -7,6 +7,8 @@ import argparse
 
 classify_patches('/user/gbahloul/home/WORK_2016/shanu-work/Retail-Conversion-master/S1-T1-C/pets2006s1t1cview1.xgtf','/user/gbahloul/home/WORK_2016/shanu-work/Retail-Conversion-master/S1-T1-C/video/pets2006/S1-T1-C/1','jpeg','./resultat2','')
 
+#classify_patches('/user/gbahloul/home/WORK_2016/Retail-Conversion-master/videoOriginalcut/Animaux-v2.xml','/user/gbahloul/home/WORK_2016/Retail-Conversion-master/videoOriginalcut/images/','jpg','./originalcut','originalcut')
+
 #def main():
 #	parser = argparse.ArgumentParser()
 #	parser.add_argument("GTfile", help="Full location of the Ground Truth file(.xgtf file)")

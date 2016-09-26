@@ -68,23 +68,24 @@ def classify_patches(xgtf_name,frames_path,frame_ext,new_location,new_prefix):
 	patch_files = glob.glob(os.path.join(path_folder,'*.'+frame_ext))
 	patch_files = [os.path.basename(f) for f in patch_files]
 	patch_files = [os.path.splitext(f)[0] for f in patch_files]
-	namespace = 'http://lamp.cfar.umd.edu/viper#' # All XGTF files from SUP use this namespace. DO NOT EDIT or REMOVE this line 
+	#namespace = 'http://lamp.cfar.umd.edu/viper#' # All XGTF files from SUP use this namespace. DO NOT EDIT or REMOVE this line 
 	doc = ET.parse(os.path.join(root_path,fname)) # This line reads the XGTF file from the disk
-	data_tag = str(QName(namespace,'data')) # This helps Python to parse each tag by stripping it off its namespace part. So it is essential. DO NOT CHANGE OR COMMENT
+	#data_tag = str(QName(namespace,'data')) # This helps Python to parse each tag by stripping it off its namespace part. So it is essential. DO NOT CHANGE OR COMMENT
+	data_tag = "Object"
 	data = doc.find(data_tag) # All relevant data for creating patches is present with a "data" tag. Hence we find all nodes which have a "data" tag
 	frame_list=list() 
 	j=list()
 	temp_list=list()
 	root=doc.getroot()
 	for x in data.iter():
-		location = ["Location","info2D"]
-		if (x.get('name')in location): #This is to be used for extracting the 'Location' tag from the .xgtf file. Modify this according to the .xgtf file being used.
+		#location = ["Location","info2D"]
+		#if (x.get('name')in location): #This is to be used for extracting the 'Location' tag from the .xgtf file. Modify this according to the .xgtf file being used.
 			f= [gt.get('framespan') for gt in x] 
 			j=list()
 			for frame in f:				#Iterate through the list f which contains information of the frames in '34:34' format.
 				g=frame.split(':',1)	#Used to strip the entry 
 				g= map(int,g)			#Convert the string into an integer
-				if g[0]==g[1]:			# For handling entries of the form '34:34'
+				if g[0]==g[1]:			#For handling entries of the form '34:34'
 					j.append(g[0])		#Append either one of the entry to the temporary list
 				if g[0]!=g[1]:			# For handling entries of the form '34:36'
 					for i in range(g[0],g[1]+1): #Append the list of numbers from the starting to the finishing frame
@@ -92,7 +93,7 @@ def classify_patches(xgtf_name,frames_path,frame_ext,new_location,new_prefix):
 		frame_list=list(set(frame_list+j)) 
 	for frame in f:  #Delete the original f list which has entries of the form '12:12' & '13:14'
 		del frame
-	list_of_files=[name for name in listdir(frames_path) if name[-4:] in image_type ] #Generate a list of the files from the dataset. #to extract the files with .jpeg extension. Modify it to get .jpg if need be.
+	list_of_files=[name for name in listdir(frames_path) if name[-3:] in image_type ] #Generate a list of the files from the dataset. #to extract the files with .jpeg extension. Modify it to get .jpg if need be.
 	#print(list_of_files)
 	list_of_files.sort() #Sort the list of files from the ground truth 
 	for idx in frame_list:  #Loop to check the correspondence of positive frames from the list of files and append them to a new list 
@@ -112,7 +113,6 @@ def classify_patches(xgtf_name,frames_path,frame_ext,new_location,new_prefix):
 		shutil.copyfile(os.path.join(path_folder,frame),os.path.join(new_location,'positive',new_prefix+'_'+frame))
 	print ("Time taken to copy positive patches: %s seconds" %(time.time()-time_init))
 	time_init=time.time()
-	print ('positive patches are: ' ,frame_list)
 	print "\nCopying negative patches.\n"
 	for f in neg_patches:
 		shutil.copyfile(os.path.join(path_folder,f),os.path.join(new_location,'negative',new_prefix+'_'+f))
@@ -128,6 +128,7 @@ def classify_patches(xgtf_name,frames_path,frame_ext,new_location,new_prefix):
 	for f in frame_list:
 		label_file.write(new_prefix+'_'+os.path.splitext(f)[0]+' 1\n')
 	label_file.close()
+	print ('positive patches are: ' ,frame_list)
 	print('Time taken to write the positive label file  was %s seconds'%(time.time()-time_init))
 	time_init = time.time()
 	neg_patches = list(set(neg_patches))
@@ -161,6 +162,11 @@ def write_voc_format(xgtf_path,frames_path, patch_folder, patch_prefix, patch_ex
 		width_list = list()
 		x_list = list()
 		y_list = list()
+		#xmin_list = list()
+		#ymin_list = list()
+		#xmax_list = list()
+		#ymax_list = list()
+		#objectID_list = list()
 		j=list()
 		temp_list=list()
 		if not(os.path.exists(os.path.join(path_folder,'annotations'))):
